@@ -20,6 +20,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchDevices, createDevice, fetchDeviceById, updateDevice, updateDeviceStatus, assignDevice, unassignDevice, deleteDevice } from "@/store/deviceSlice";
 import { fetchSurveyMasters } from "@/store/surveyMasterSlice";
+import { zoneService } from "@/services/zoneService";
 
 export default function Devices() {
   const dispatch = useAppDispatch();
@@ -39,14 +40,29 @@ export default function Devices() {
     deviceId: "",
     battery: 100,
     location: "",
+    zoneId: "",
   });
+  const [zones, setZones] = useState<any[]>([]);
 
   useEffect(() => {
     if (tokens?.accessToken) {
       dispatch(fetchDevices(tokens.accessToken));
       dispatch(fetchSurveyMasters({ token: tokens.accessToken, page: 1, limit: 100 }));
+      fetchZones();
     }
   }, [dispatch, tokens]);
+
+  const fetchZones = async () => {
+    if (!tokens?.accessToken) return;
+    try {
+      const zonesData = await zoneService.getAll(tokens.accessToken);
+      console.log('Zones data:', zonesData);
+      setZones(Array.isArray(zonesData) ? zonesData : []);
+    } catch (error) {
+      console.error('Failed to load zones:', error);
+      setZones([]);
+    }
+  };
 
   const activeDevices = devices.filter((d) => d.status === "ACTIVE").length;
 
@@ -58,7 +74,7 @@ export default function Devices() {
       await dispatch(createDevice({ token: tokens.accessToken, data: formData })).unwrap();
       toast.success("Device created successfully");
       setOpen(false);
-      setFormData({ deviceName: "", deviceId: "", battery: 100, location: "" });
+      setFormData({ deviceName: "", deviceId: "", battery: 100, location: "", zoneId: "" });
       dispatch(fetchDevices(tokens.accessToken));
     } catch (error: any) {
       toast.error(error.message || "Failed to create device");
@@ -78,6 +94,7 @@ export default function Devices() {
       deviceId: device.deviceId,
       battery: device.battery,
       location: device.location,
+      zoneId: device.zoneId || "",
     });
     setEditOpen(true);
   };
@@ -90,7 +107,7 @@ export default function Devices() {
       await dispatch(updateDevice({ token: tokens.accessToken, id: editId, data: formData })).unwrap();
       toast.success("Device updated successfully");
       setEditOpen(false);
-      setFormData({ deviceName: "", deviceId: "", battery: 100, location: "" });
+      setFormData({ deviceName: "", deviceId: "", battery: 100, location: "", zoneId: "" });
       dispatch(fetchDevices(tokens.accessToken));
     } catch (error: any) {
       toast.error(error.message || "Failed to update device");
@@ -311,12 +328,29 @@ export default function Devices() {
                 />
               </div>
               <div>
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="zone">Zone ({zones.length} available)</Label>
+                <Select value={formData.zoneId || "none"} onValueChange={(val) => setFormData({ ...formData, zoneId: val === "none" ? "" : val, location: "" })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a zone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Zone</SelectItem>
+                    {zones.map((zone) => (
+                      <SelectItem key={zone.id} value={zone.id}>
+                        {zone.name} ({zone.latitude}, {zone.longitude})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="location">Location (Auto-filled from zone)</Label>
                 <Input
                   id="location"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  required
+                  placeholder="Will be set from zone"
+                  disabled={!!formData.zoneId}
                 />
               </div>
             </div>
@@ -412,12 +446,29 @@ export default function Devices() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-location">Location</Label>
+                <Label htmlFor="edit-zone">Zone</Label>
+                <Select value={formData.zoneId || "none"} onValueChange={(val) => setFormData({ ...formData, zoneId: val === "none" ? "" : val, location: "" })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a zone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Zone</SelectItem>
+                    {zones.map((zone) => (
+                      <SelectItem key={zone.id} value={zone.id}>
+                        {zone.name} ({zone.latitude}, {zone.longitude})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-location">Location (Auto-filled from zone)</Label>
                 <Input
                   id="edit-location"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  required
+                  placeholder="Will be set from zone"
+                  disabled={!!formData.zoneId}
                 />
               </div>
             </div>

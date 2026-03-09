@@ -7,6 +7,9 @@ export interface SurveyResponse {
   respondentName: string;
   respondentContact: string;
   responses: { questionId: string; answer: string }[];
+  latitude?: number;
+  longitude?: number;
+  audioUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

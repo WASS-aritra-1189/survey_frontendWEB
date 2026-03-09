@@ -22,7 +22,7 @@ import {
 import { 
   Search, Download, Eye, CalendarIcon,
   FileSpreadsheet, FileText, CheckCircle, Star, TrendingUp,
-  ChevronLeft, ChevronRight, User, MessageSquare, Loader2, X
+  ChevronLeft, ChevronRight, User, MessageSquare, Loader2, X, MapPin, Volume2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
@@ -229,6 +229,8 @@ export default function Responses() {
                 <TableHead>Respondent</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Answers</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Audio</TableHead>
                 <TableHead>Submitted</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -245,6 +247,26 @@ export default function Responses() {
                   </TableCell>
                   <TableCell className="text-sm">{response.respondentContact || 'N/A'}</TableCell>
                   <TableCell><Badge variant="secondary">{response.responses.length} answers</Badge></TableCell>
+                  <TableCell className="text-sm">
+                    {response.latitude && response.longitude ? (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-primary" />
+                        <span className="text-xs">{Number(response.latitude).toFixed(4)}, {Number(response.longitude).toFixed(4)}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">N/A</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {response.audioUrl ? (
+                      <Badge variant="outline" className="gap-1">
+                        <Volume2 className="h-3 w-3" />
+                        Yes
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">N/A</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     <div className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" />{new Date(response.createdAt).toLocaleString()}</div>
                   </TableCell>
@@ -291,12 +313,33 @@ export default function Responses() {
                   <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" />Contact: {selectedResponse.respondentContact || 'N/A'}</div>
                   <div className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Submitted: {new Date(selectedResponse.createdAt).toLocaleString()}</div>
                   <div className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground" />Updated: {new Date(selectedResponse.updatedAt).toLocaleString()}</div>
+                  {selectedResponse.latitude && selectedResponse.longitude && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      Location: {Number(selectedResponse.latitude).toFixed(6)}, {Number(selectedResponse.longitude).toFixed(6)}
+                    </div>
+                  )}
                 </div>
                 <Card className="p-3 text-center">
                   <p className="text-2xl font-bold text-primary">{selectedResponse.responses.length}</p>
                   <p className="text-xs text-muted-foreground">Total Answers</p>
                 </Card>
               </div>
+
+              {selectedResponse.audioUrl && (
+                <Card className="p-4 mt-4">
+                  <div className="flex items-center gap-3">
+                    <Volume2 className="h-5 w-5 text-primary" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium mb-2">Audio Response</p>
+                      <audio controls className="w-full">
+                        <source src={selectedResponse.audioUrl} type="audio/webm" />
+                        Your browser does not support the audio element.
+                      </audio>
+                    </div>
+                  </div>
+                </Card>
+              )}
 
               <Separator className="my-4" />
 
