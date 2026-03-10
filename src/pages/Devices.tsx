@@ -43,23 +43,23 @@ export default function Devices() {
     zoneId: "",
   });
   const [zones, setZones] = useState<any[]>([]);
+  const [limit, setLimit] = useState(100);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (tokens?.accessToken) {
-      dispatch(fetchDevices(tokens.accessToken));
+      dispatch(fetchDevices({ token: tokens.accessToken, limit, page }));
       dispatch(fetchSurveyMasters({ token: tokens.accessToken, page: 1, limit: 100 }));
       fetchZones();
     }
-  }, [dispatch, tokens]);
+  }, [dispatch, tokens, limit, page]);
 
   const fetchZones = async () => {
     if (!tokens?.accessToken) return;
     try {
       const zonesData = await zoneService.getAll(tokens.accessToken);
-      console.log('Zones data:', zonesData);
       setZones(Array.isArray(zonesData) ? zonesData : []);
     } catch (error) {
-      console.error('Failed to load zones:', error);
       setZones([]);
     }
   };
@@ -75,7 +75,7 @@ export default function Devices() {
       toast.success("Device created successfully");
       setOpen(false);
       setFormData({ deviceName: "", deviceId: "", battery: 100, location: "", zoneId: "" });
-      dispatch(fetchDevices(tokens.accessToken));
+      dispatch(fetchDevices({ token: tokens.accessToken, limit, page }));
     } catch (error: any) {
       toast.error(error.message || "Failed to create device");
     }
@@ -108,7 +108,7 @@ export default function Devices() {
       toast.success("Device updated successfully");
       setEditOpen(false);
       setFormData({ deviceName: "", deviceId: "", battery: 100, location: "", zoneId: "" });
-      dispatch(fetchDevices(tokens.accessToken));
+      dispatch(fetchDevices({ token: tokens.accessToken, limit, page }));
     } catch (error: any) {
       toast.error(error.message || "Failed to update device");
     }
@@ -120,7 +120,7 @@ export default function Devices() {
     try {
       await dispatch(updateDeviceStatus({ token: tokens.accessToken, id, status })).unwrap();
       toast.success("Device status updated successfully");
-      dispatch(fetchDevices(tokens.accessToken));
+      dispatch(fetchDevices({ token: tokens.accessToken, limit, page }));
     } catch (error: any) {
       toast.error(error.message || "Failed to update device status");
     }
@@ -140,7 +140,7 @@ export default function Devices() {
       await dispatch(assignDevice({ token: tokens.accessToken, id: assignId, surveyMasterId: selectedMasterId })).unwrap();
       toast.success("Device assigned successfully");
       setAssignOpen(false);
-      dispatch(fetchDevices(tokens.accessToken));
+      dispatch(fetchDevices({ token: tokens.accessToken, limit, page }));
     } catch (error: any) {
       toast.error(error.message || "Failed to assign device");
     }
@@ -152,7 +152,7 @@ export default function Devices() {
     try {
       await dispatch(unassignDevice({ token: tokens.accessToken, id })).unwrap();
       toast.success("Device unassigned successfully");
-      dispatch(fetchDevices(tokens.accessToken));
+      dispatch(fetchDevices({ token: tokens.accessToken, limit, page }));
     } catch (error: any) {
       toast.error(error.message || "Failed to unassign device");
     }
@@ -164,7 +164,7 @@ export default function Devices() {
     try {
       await dispatch(deleteDevice({ token: tokens.accessToken, id })).unwrap();
       toast.success("Device deleted successfully");
-      dispatch(fetchDevices(tokens.accessToken));
+      dispatch(fetchDevices({ token: tokens.accessToken, limit, page }));
     } catch (error: any) {
       toast.error(error.message || "Failed to delete device");
     }
@@ -194,10 +194,24 @@ export default function Devices() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>All Devices</CardTitle>
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Device
-            </Button>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Show:</Label>
+              <Select value={limit.toString()} onValueChange={(val) => setLimit(Number(val))}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Device
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -287,6 +301,31 @@ export default function Devices() {
               </TableBody>
             </Table>
           )}
+          {devices.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} devices
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page * limit >= total}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -328,7 +367,7 @@ export default function Devices() {
                 />
               </div>
               <div>
-                <Label htmlFor="zone">Zone ({zones.length} available)</Label>
+                <Label htmlFor="zone">Zone</Label>
                 <Select value={formData.zoneId || "none"} onValueChange={(val) => setFormData({ ...formData, zoneId: val === "none" ? "" : val, location: "" })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a zone" />
@@ -344,12 +383,12 @@ export default function Devices() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="location">Location (Auto-filled from zone)</Label>
+                <Label htmlFor="location">Location</Label>
                 <Input
                   id="location"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="Will be set from zone"
+                  placeholder="Auto-filled from zone"
                   disabled={!!formData.zoneId}
                 />
               </div>
@@ -462,12 +501,12 @@ export default function Devices() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="edit-location">Location (Auto-filled from zone)</Label>
+                <Label htmlFor="edit-location">Location</Label>
                 <Input
                   id="edit-location"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="Will be set from zone"
+                  placeholder="Auto-filled from zone"
                   disabled={!!formData.zoneId}
                 />
               </div>

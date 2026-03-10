@@ -19,8 +19,8 @@ const initialState: DeviceState = {
 
 export const fetchDevices = createAsyncThunk(
   "device/fetchDevices",
-  async (token: string) => {
-    const response = await deviceService.getAll(token);
+  async ({ token, limit = 100, page = 1 }: { token: string; limit?: number; page?: number }) => {
+    const response = await deviceService.getAll(token, limit, page);
     return response.data;
   }
 );

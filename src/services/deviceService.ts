@@ -34,8 +34,8 @@ export interface CreateDeviceData {
 }
 
 export const deviceService = {
-  getAll: async (token: string): Promise<DeviceListResponse> => {
-    const response = await fetch(`${BaseUrl}/devices`, {
+  getAll: async (token: string, limit: number = 100, page: number = 1): Promise<DeviceListResponse> => {
+    const response = await fetch(`${BaseUrl}/devices?limit=${limit}&page=${page}`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
