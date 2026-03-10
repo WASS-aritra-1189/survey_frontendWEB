@@ -37,8 +37,8 @@ const initialState: StaffDetailState = {
 
 export const fetchStaffDetails = createAsyncThunk(
   "staffDetail/fetchAll",
-  async ({ token, page, limit, search }: { token: string; page?: number; limit?: number; search?: string }) => {
-    const response = await staffDetailService.getAll(token, { page, limit, search });
+  async ({ token, page, limit, search, settingId }: { token: string; page?: number; limit?: number; search?: string; settingId?: string }) => {
+    const response = await staffDetailService.getAll(token, { page, limit, search, settingId });
     return response.data;
   }
 );

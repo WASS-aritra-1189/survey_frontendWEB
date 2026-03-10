@@ -83,7 +83,7 @@ const accountSlice = createSlice({
         state.loading = false;
         const account = state.accounts.find((a: any) => a.id === action.payload.id);
         if (account) {
-          (account as any).status = action.payload.status;
+          (account as any).status = action.payload.status === 'active' ? 'ACTIVE' : 'DEACTIVE';
         }
       })
       .addCase(changeStatus.rejected, (state, action) => {

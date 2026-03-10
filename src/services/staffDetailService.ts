@@ -1,11 +1,12 @@
 import { BaseUrl } from "@/config/BaseUrl";
 
 export const staffDetailService = {
-  getAll: async (token: string, params: { page?: number; limit?: number; search?: string }) => {
+  getAll: async (token: string, params: { page?: number; limit?: number; search?: string; settingId?: string }) => {
     const searchParams = new URLSearchParams();
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
     if (params.search) searchParams.append('search', params.search);
+    if (params.settingId) searchParams.append('settingId', params.settingId);
     
     const response = await fetch(`${BaseUrl}/staff-details?${searchParams.toString()}`, {
       headers: {

@@ -45,11 +45,11 @@ export const accountService = {
   },
 
   changeStatus: async (token: string, id: string, status: string) => {
-    const response = await fetch(`${BaseUrl}/accounts/${id}/status/${status}`, {
+    const statusValue = status === 'active' ? 'ACTIVE' : 'DEACTIVE';
+    const response = await fetch(`${BaseUrl}/accounts/${id}/status/${statusValue}`, {
       method: "PATCH",
       headers: {
         "Authorization": `Bearer ${token}`,
-        // "Content-Type": "application/json",
       },
     });
 

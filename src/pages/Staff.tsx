@@ -112,8 +112,9 @@ export default function Staff() {
   useEffect(() => {
     if (!tokens?.accessToken) return;
     
-    dispatch(fetchAccounts({ token: tokens.accessToken, page, limit, search: searchQuery }));
-    dispatch(fetchStaffDetails({ token: tokens.accessToken, page, limit, search: searchQuery }));
+    const params = { token: tokens.accessToken, page, limit, search: searchQuery };
+    dispatch(fetchAccounts(params));
+    dispatch(fetchStaffDetails({ ...params, settingId: tokens.settingId }));
     dispatch(fetchSettings(tokens.accessToken));
     dispatch(fetchAccountLevels(tokens.accessToken));
     dispatch(fetchDesignations(tokens.accessToken));
@@ -199,12 +200,13 @@ export default function Staff() {
     }
   };
 
-  const handleStatusChange = async (accountId: string, status: string) => {
+  const handleStatusChange = async (accountId: string, currentStatus: string) => {
     if (!tokens?.accessToken) return;
 
     try {
-      await dispatch(changeStatus({ token: tokens.accessToken, id: accountId, status })).unwrap();
-      toast.success(`Status changed to ${status}`);
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      await dispatch(changeStatus({ token: tokens.accessToken, id: accountId, status: newStatus })).unwrap();
+      toast.success(`Status changed to ${newStatus}`);
       dispatch(fetchAccounts({ token: tokens.accessToken, page, limit, search: searchQuery }));
     } catch (error) {
       toast.error("Failed to change status");
@@ -352,7 +354,7 @@ export default function Staff() {
                                 Edit
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem onClick={() => handleStatusChange(member.id, member.status === 'active' ? 'DEACTIVE' : 'ACTIVE')}>
+                            <DropdownMenuItem onClick={() => handleStatusChange(member.id, member.status)}>
                               {member.status === 'active' ? 'Deactivate' : 'Activate'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
