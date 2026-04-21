@@ -54,6 +54,9 @@ export default function Responses() {
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [filterLat, setFilterLat] = useState("");
+  const [filterLng, setFilterLng] = useState("");
+  const [filterRadius, setFilterRadius] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -98,11 +101,14 @@ export default function Responses() {
         startDate: startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
         endDate: endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
         surveyMasterIds: masterFilter !== "all" ? masterFilter : undefined,
+        filterLat: filterLat && filterLng && filterRadius ? parseFloat(filterLat) : undefined,
+        filterLng: filterLat && filterLng && filterRadius ? parseFloat(filterLng) : undefined,
+        filterRadius: filterLat && filterLng && filterRadius ? parseFloat(filterRadius) : undefined,
       }));
     } else {
       dispatch(clearResponses());
     }
-  }, [surveyFilter, masterFilter, searchQuery, page, limit, startDate, endDate, dispatch, tokens]);
+  }, [surveyFilter, masterFilter, searchQuery, page, limit, startDate, endDate, filterLat, filterLng, filterRadius, dispatch, tokens]);
 
   const handleExport = (fmt: string) => {
     if (!selectedResponse && surveyFilter === 'all') {
@@ -223,6 +229,35 @@ export default function Responses() {
               </Popover>
               {(startDate || endDate) && (
                 <Button variant="ghost" size="icon" onClick={() => { setStartDate(undefined); setEndDate(undefined); }}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+              <Input
+                placeholder="Latitude"
+                value={filterLat}
+                onChange={(e) => setFilterLat(e.target.value)}
+                className="w-[120px]"
+                type="number"
+                step="any"
+              />
+              <Input
+                placeholder="Longitude"
+                value={filterLng}
+                onChange={(e) => setFilterLng(e.target.value)}
+                className="w-[120px]"
+                type="number"
+                step="any"
+              />
+              <Input
+                placeholder="Radius (m)"
+                value={filterRadius}
+                onChange={(e) => setFilterRadius(e.target.value)}
+                className="w-[110px]"
+                type="number"
+                min="0"
+              />
+              {(filterLat || filterLng || filterRadius) && (
+                <Button variant="ghost" size="icon" onClick={() => { setFilterLat(""); setFilterLng(""); setFilterRadius(""); }}>
                   <X className="h-4 w-4" />
                 </Button>
               )}

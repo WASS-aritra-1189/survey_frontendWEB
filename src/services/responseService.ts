@@ -33,7 +33,10 @@ export const responseService = {
     search?: string,
     startDate?: string,
     endDate?: string,
-    surveyMasterIds?: string
+    surveyMasterIds?: string,
+    filterLat?: number,
+    filterLng?: number,
+    filterRadius?: number
   ): Promise<ResponseListResponse> {
     const params = new URLSearchParams({
       surveyId,
@@ -43,6 +46,11 @@ export const responseService = {
       ...(startDate && { startDate }),
       ...(endDate && { endDate }),
       ...(surveyMasterIds && { surveyMasterIds }),
+      ...(filterLat != null && filterLng != null && filterRadius != null && {
+        filterLat: filterLat.toString(),
+        filterLng: filterLng.toString(),
+        filterRadius: filterRadius.toString(),
+      }),
     });
 
     const url = `${BaseUrl}/survey-responses?${params}`;

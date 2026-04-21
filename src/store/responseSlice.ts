@@ -32,6 +32,9 @@ export const fetchResponses = createAsyncThunk(
     startDate,
     endDate,
     surveyMasterIds,
+    filterLat,
+    filterLng,
+    filterRadius,
   }: {
     token: string;
     surveyId: string;
@@ -41,8 +44,11 @@ export const fetchResponses = createAsyncThunk(
     startDate?: string;
     endDate?: string;
     surveyMasterIds?: string;
+    filterLat?: number;
+    filterLng?: number;
+    filterRadius?: number;
   }) => {
-    const response = await responseService.getAll(token, surveyId, page, limit, search, startDate, endDate, surveyMasterIds);
+    const response = await responseService.getAll(token, surveyId, page, limit, search, startDate, endDate, surveyMasterIds, filterLat, filterLng, filterRadius);
     return response.data;
   }
 );
