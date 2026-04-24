@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,22 +10,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { BaseUrl } from '@/config/BaseUrl';
 import { Loader2, MapPin, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/store/authStore';
 import { responseService } from '@/services/responseService';
 
 export default function PrivateSurvey() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const { tokens } = useAuthStore();
+
+  const [pin, setPin] = useState('');
+  const [pinVerified, setPinVerified] = useState(false);
+  const [pinError, setPinError] = useState('');
 
   const [survey, setSurvey] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
 
-  // Background audio recording refs — no UI
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -40,9 +40,9 @@ export default function PrivateSurvey() {
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
       };
-      recorder.start(1000); // timeslice ensures data is collected every 1s
+      recorder.start(1000);
     } catch {
-      // Permission denied or unavailable — silently ignore
+      // silently ignore
     }
   };
 
@@ -61,36 +61,46 @@ export default function PrivateSurvey() {
           : null;
         resolve(blob);
       };
-      recorder.requestData(); // flush any buffered data before stop
+      recorder.requestData();
       recorder.stop();
       streamRef.current?.getTracks().forEach(t => t.stop());
     });
   };
 
   useEffect(() => {
-    startBackgroundRecording();
     return () => {
       if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop();
       streamRef.current?.getTracks().forEach(t => t.stop());
     };
   }, []);
 
-  useEffect(() => {
-    if (!tokens?.accessToken) {
-      navigate('/login', { replace: true });
+  const handleVerifyPin = async () => {
+    if (pin.length !== 4) {
+      setPinError('Please enter a 4-digit PIN');
       return;
     }
-
-    fetch(`${BaseUrl}/surveys/public/${id}`, {
-      headers: { Authorization: `Bearer ${tokens.accessToken}` },
-    })
-      .then(res => res.json())
-      .then(data => {
-        setSurvey(data.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [id, tokens, navigate]);
+    setLoading(true);
+    setPinError('');
+    try {
+      const res = await fetch(`${BaseUrl}/surveys/public/${id}`);
+      const data = await res.json();
+      if (!res.ok || !data.data) {
+        setPinError('Survey not found');
+        return;
+      }
+      if (data.data.accessToken !== pin) {
+        setPinError('Incorrect PIN. Please try again.');
+        return;
+      }
+      setSurvey(data.data);
+      setPinVerified(true);
+      startBackgroundRecording();
+    } catch {
+      setPinError('Failed to load survey. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getLocation = () => {
     setGettingLocation(true);
@@ -110,11 +120,6 @@ export default function PrivateSurvey() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!tokens?.accessToken) {
-      navigate('/login', { replace: true });
-      return;
-    }
 
     if (survey.requiresLocationValidation && !location) {
       toast.error('Please capture your location before submitting');
@@ -140,15 +145,12 @@ export default function PrivateSurvey() {
     try {
       const audioBlob = await stopAndGetBlob();
 
-      const res = await fetch(`${BaseUrl}/survey-responses/private`, {
+      const res = await fetch(`${BaseUrl}/survey-responses/master`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${tokens.accessToken}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           surveyId: id,
-          accessToken: survey.accessToken,
+          accessToken: pin,
           responses,
           ...(location ?? {}),
         }),
@@ -158,19 +160,17 @@ export default function PrivateSurvey() {
       if (!res.ok) {
         throw new Error(resJson?.data?.message || resJson?.message || 'Submission failed');
       }
-      // Backend wraps response: { success, data: { id, ... } }
+
       const responseId = resJson?.data?.id ?? resJson?.id;
 
-      // Upload single background audio via authenticated endpoint
       if (responseId && audioBlob && audioBlob.size > 0) {
-        await responseService.uploadAudioPrivate(tokens.accessToken, responseId, audioBlob).catch(() => {});
+        await responseService.uploadAudio('', responseId, audioBlob).catch(() => {});
       }
 
       toast.success('Survey submitted successfully!');
       setAnswers({});
       setLocation(null);
       audioChunksRef.current = [];
-      // Restart background recording for next response
       startBackgroundRecording();
     } catch (error: any) {
       toast.error(error.message || 'Failed to submit survey');
@@ -179,20 +179,31 @@ export default function PrivateSurvey() {
     }
   };
 
-  if (loading) {
+  if (!pinVerified) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!survey) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Survey not found</p>
+      <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-2">
+              <Lock className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle>Private Survey</CardTitle>
+            <CardDescription>Enter the 4-digit PIN to access this survey</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="Enter PIN"
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+              className="text-center text-2xl tracking-widest"
+            />
+            {pinError && <p className="text-sm text-destructive text-center">{pinError}</p>}
+            <Button className="w-full" onClick={handleVerifyPin} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Access Survey'}
+            </Button>
           </CardContent>
         </Card>
       </div>

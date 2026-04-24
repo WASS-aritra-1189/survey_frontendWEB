@@ -49,8 +49,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/private-survey/:id" element={<PrivateSurvey />} />
             <Route path="/survey/:id" element={<PublicSurvey />} />
-            <Route path="/survey/private/:id" element={<PrivateSurvey />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/surveys" element={<ProtectedRoute><Surveys /></ProtectedRoute>} />
             <Route path="/surveys/new" element={<ProtectedRoute><SurveyWizard /></ProtectedRoute>} />
